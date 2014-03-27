@@ -4259,6 +4259,7 @@ Statement *Parser::parseStatement(int flags, const utf8_t** endPtr)
                 check(TOKsemicolon);
                 if (e->op == TOKmixin)
                 {
+					printf("%d TOKmixin\n", __LINE__);
                     CompileExp *cpe = (CompileExp *)e;
                     s = new CompileStatement(loc, cpe->e1);
                 }

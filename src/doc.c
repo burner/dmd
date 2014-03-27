@@ -646,6 +646,11 @@ static void expandTemplateMixinComments(TemplateMixin *tm, Scope *sc)
     }
 }
 
+/** Recursively expand string mixin docs into the scope. */
+static void expandStringMixinComments(TemplateMixin *tm, Scope *sc)
+{
+}
+
 void emitMemberComments(ScopeDsymbol *sds, Scope *sc)
 {
     //printf("ScopeDsymbol::emitMemberComments() %s\n", toChars());
@@ -723,7 +728,7 @@ void emitComment(Dsymbol *s, Scope *sc)
 
         void visit(Declaration *d)
         {
-            //printf("Declaration::emitComment(%p '%s'), comment = '%s'\n", d, d->toChars(), d->comment);
+            printf("Declaration::emitComment(%p '%s'), comment = '%s'\n", d, d->toChars(), d->comment);
             //printf("type = %p\n", d->type);
 
             if (d->protection == PROTprivate || sc->protection == PROTprivate ||
@@ -784,6 +789,12 @@ void emitComment(Dsymbol *s, Scope *sc)
             emitMemberComments(ad, sc);
             buf->writestring(ddoc_decl_dd_e);
         }
+
+        void visit(CompileStatement *cs) 
+		{
+			printf("%d visitCompileStatement\n", __LINE__);
+			cs->flatten(sc);
+		}
 
         void visit(TemplateDeclaration *td)
         {
