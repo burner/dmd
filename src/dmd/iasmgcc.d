@@ -383,6 +383,7 @@ unittest
     // Immitates parseStatement for asm statements.
     static void parseAsm(string input, bool expectError)
     {
+        import core.stdc.stdio;
         // Generate tokens from input test.
         scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
         scope p = new Parser!ASTCodegen(null, input, false, diagnosticReporter);
@@ -395,6 +396,7 @@ unittest
         p.check(TOK.leftCurly);
         while (1)
         {
+            printf("New Token\n");
             if (p.token.value == TOK.rightCurly || p.token.value == TOK.endOfFile)
                 break;
             *ptoklist = //p.allocateToken();

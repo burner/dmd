@@ -6340,6 +6340,7 @@ final class Parser(AST) : Lexer
                         goto Lerror;
 
                     default:
+                        printf("New Token\n");
                         *ptoklist = //allocateToken();
                             new Token;
                         memcpy(*ptoklist, &token(), Token.sizeof);
