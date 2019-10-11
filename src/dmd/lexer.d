@@ -215,6 +215,8 @@ class Lexer
 
     Token token;
 
+    Token[] allToken;       // all token generated from the input
+
     private
     {
         const(char)* base;      // pointer to start of buffer
@@ -292,6 +294,14 @@ class Lexer
             }
             endOfLine();
         }
+    }
+
+    void lexAll() {
+        do {
+            Token cur;
+            scan(&cur);
+            this.allToken ~= cur;
+        } while (!(*p == 0 || *p == 0x1A));
     }
 
     /// Returns: `true` if any errors occurred during lexing or parsing.

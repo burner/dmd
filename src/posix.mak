@@ -433,7 +433,8 @@ unittest: $G/dmd-unittest
 
 ######## DMD as a library examples
 
-EXAMPLES=$(addprefix $G/examples/, avg impvisitor)
+#EXAMPLES=$(addprefix $G/examples/, avg impvisitor lex_all_at_once)
+EXAMPLES=$(addprefix $G/examples/, lex_all_at_once)
 PARSER_SRCS=$(addsuffix .d, $(addprefix $D/,parse astbase parsetimevisitor transitivevisitor permissivevisitor strictvisitor utils))
 
 $G/parser.a: $(PARSER_SRCS) $(LEXER_SRCS) $(ROOT_SRCS) dmd $(SRC_MAKE)
