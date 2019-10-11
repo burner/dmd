@@ -1136,7 +1136,8 @@ class Lexer
         //    ct.next = t;
         //}
         //return t;
-        return ct + Token.sizeof;
+        //return ct + Token.sizeof;
+        return ct + 1;
     }
 
     /*********************************
@@ -1145,13 +1146,17 @@ class Lexer
      */
     final Token* peekPastParen(Token* tk)
     {
-        //printf("peekPastParen()\n");
+        //printf("peekPastParen() %s\n     %u %u %u\n%u\n", tk.toChars(),
+        //        this.allToken.ptr, tk, this.allToken.ptr +
+        //        this.allToken.length, Token.sizeof);
         int parens = 1;
         int curlynest = 0;
         while (1)
         {
             tk = peek(tk);
-            //tk.print();
+            //printf("peek %u %u %u %s\n",
+            //        this.allToken.ptr, tk, this.allToken.ptr +
+            //        this.allToken.length, tk.toChars());
             switch (tk.value)
             {
             case TOK.leftParentheses:

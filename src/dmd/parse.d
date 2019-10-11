@@ -3176,7 +3176,6 @@ final class Parser(AST) : Lexer
 
                 if (type && type != AST.Type.terror)
                 {
-                    printf("%s\n", token().toChars());
                     if (!ident)
                         error("no identifier for declarator `%s`", type.toChars());
                     if (!isAnonymousEnum)

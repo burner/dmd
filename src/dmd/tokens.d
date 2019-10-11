@@ -444,7 +444,7 @@ extern (C++) struct Token
         {
             const(char)* ustring; // UTF8 string
             uint len;
-            ubyte postfix; // 'c', 'w', 'd'
+            ubyte postfix; // 'c', 'w', 'd'../generated/linux/release/64 -w -de -g -dip25 dmd/parse.d dmd/astbase.d dmd/parsetimevisitor.d dmd/transitivevisitor.d dmd/permissivevisitor.d dmd/strictvisitor.d dmd/utils.d dmd/console.d dmd/entity.d dmd/errors.d dmd/filecache.d dmd/globals.d dmd/id.d dmd/identifier.d dmd/lexer.d dmd/tokens.d dmd/utf.d dmd/root/aav.d dmd/root/array.d dmd/root/ctfloat.d dmd/root/file.d dmd/root/filename.d dmd/root/man.d dmd/root/outbuffer.d dmd/root/port.d dmd/root/region.d dmd/root/response.d dmd/root/rmem.d dmd/root/rootobject.d dmd/root/speller.d dmd/root/longdouble.d dmd/root/strtold.d dmd/root/stringtable.d dmd/root/hash.d dmd/root/string.d
         }
 
         Identifier ident;
