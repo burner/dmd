@@ -213,9 +213,13 @@ class Lexer
 
     const(char)* p;         // current character
 
-    Token token;
+    //Token token;
+    @property ref Token token() nothrow {
+        return this.allToken[this.tokenIdx];
+    }
 
     Token[] allToken;       // all token generated from the input
+    size_t tokenIdx;
 
     private
     {
@@ -261,7 +265,7 @@ class Lexer
         scanloc = Loc(filename, 1, 1);
         //printf("Lexer::Lexer(%p,%d)\n",base,length);
         //printf("lexer.filename = %s\n", filename);
-        token = Token.init;
+        //token = Token.init;
         this.base = base;
         this.end = base + endoffset;
         p = base + begoffset;
@@ -313,28 +317,29 @@ class Lexer
     /// Returns: a newly allocated `Token`.
     Token* allocateToken() pure nothrow @safe
     {
-        if (tokenFreelist)
-        {
-            Token* t = tokenFreelist;
-            tokenFreelist = t.next;
-            t.next = null;
-            return t;
-        }
-        return new Token();
+        //if (tokenFreelist)
+        //{
+        //    Token* t = tokenFreelist;
+        //    tokenFreelist = t.next;
+        //    t.next = null;
+        //    return t;
+        //}
+        //return new Token();
+        return null;
     }
 
     /// Frees the given token by returning it to the freelist.
     private void releaseToken(Token* token) pure nothrow @nogc @safe
     {
-        if (mem.isGCEnabled)
-            *token = Token.init;
-        token.next = tokenFreelist;
-        tokenFreelist = token;
+        //if (mem.isGCEnabled)
+        //    *token = Token.init;
+        //token.next = tokenFreelist;
+        //tokenFreelist = token;
     }
 
     final TOK nextToken()
     {
-        prevloc = token.loc;
+        /*prevloc = token.loc;
         if (token.next)
         {
             Token* t = token.next;
@@ -347,6 +352,9 @@ class Lexer
         }
         //printf(token.toChars());
         return token.value;
+        */
+        ++this.tokenIdx;
+        return this.allToken[this.tokenIdx].value;
     }
 
     /***********************
@@ -354,7 +362,8 @@ class Lexer
      */
     final TOK peekNext()
     {
-        return peek(&token).value;
+        //return peek(&token).value;
+        return this.allToken[this.tokenIdx + 1].value;
     }
 
     /***********************
@@ -362,8 +371,9 @@ class Lexer
      */
     final TOK peekNext2()
     {
-        Token* t = peek(&token);
-        return peek(t).value;
+        //Token* t = peek(&token);
+        //return peek(t).value;
+        return this.allToken[this.tokenIdx + 2].value;
     }
 
     /****************************
@@ -1116,16 +1126,17 @@ class Lexer
 
     final Token* peek(Token* ct)
     {
-        Token* t;
-        if (ct.next)
-            t = ct.next;
-        else
-        {
-            t = allocateToken();
-            scan(t);
-            ct.next = t;
-        }
-        return t;
+        //Token* t;
+        //if (ct.next)
+        //    t = ct.next;
+        //else
+        //{
+        //    t = allocateToken();
+        //    scan(t);
+        //    ct.next = t;
+        //}
+        //return t;
+        return ct + Token.sizeof;
     }
 
     /*********************************

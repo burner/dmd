@@ -990,7 +990,7 @@ extern (C++) final class Module : Package
         }
         {
             scope p = new Parser!AST(this, buf, cast(bool) docfile, diagnosticReporter);
-            p.nextToken();
+            p.lexAll();
             members = p.parseModule();
             md = p.md;
             numlines = p.scanloc.linnum;

@@ -815,7 +815,8 @@ extern (C++) final class CompileStatement : Statement
         const str = buf.extractChars()[0 .. len];
         scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
         scope p = new Parser!ASTCodegen(loc, sc._module, str, false, diagnosticReporter);
-        p.nextToken();
+        p.lexAll();
+        //p.nextToken();
 
         auto a = new Statements();
         while (p.token.value != TOK.endOfFile)

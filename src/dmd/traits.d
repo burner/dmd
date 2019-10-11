@@ -1548,7 +1548,8 @@ Expression semanticTraits(TraitsExp e, Scope* sc)
                     const str = buf.extractChars()[0 .. len];
                     scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
                     scope p = new Parser!ASTCodegen(e.loc, sc._module, str, false, diagnosticReporter);
-                    p.nextToken();
+                    p.lexAll();
+                    //p.nextToken();
                     //printf("p.loc.linnum = %d\n", p.loc.linnum);
 
                     o = p.parseTypeOrAssignExp();

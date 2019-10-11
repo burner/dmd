@@ -286,6 +286,7 @@ public Statement gccAsmSemantic(GccAsmStatement s, Scope *sc)
     //printf("GccAsmStatement.semantic()\n");
     scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
     scope p = new Parser!ASTCodegen(sc._module, ";", false, diagnosticReporter);
+    p.lexAll();
 
     // Make a safe copy of the token list before parsing.
     Token *toklist = null;
@@ -373,6 +374,7 @@ unittest
         scope gas = new GccAsmStatement(Loc.initial, tokens);
         scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
         scope p = new Parser!ASTCodegen(null, ";", false, diagnosticReporter);
+        p.lexAll();
         p.token = *tokens;
         p.parseGccAsm(gas);
         return p.errors;
@@ -384,6 +386,7 @@ unittest
         // Generate tokens from input test.
         scope diagnosticReporter = new StderrDiagnosticReporter(global.params.useDeprecated);
         scope p = new Parser!ASTCodegen(null, input, false, diagnosticReporter);
+        p.lexAll();
         p.nextToken();
 
         Token* toklist = null;
@@ -394,8 +397,9 @@ unittest
         {
             if (p.token.value == TOK.rightCurly || p.token.value == TOK.endOfFile)
                 break;
-            *ptoklist = p.allocateToken();
-            memcpy(*ptoklist, &p.token, Token.sizeof);
+            *ptoklist = //p.allocateToken();
+                new Token();
+            memcpy(*ptoklist, &p.token(), Token.sizeof);
             ptoklist = &(*ptoklist).next;
             *ptoklist = null;
             p.nextToken();
