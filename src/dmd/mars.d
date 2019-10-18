@@ -22,6 +22,7 @@ import core.stdc.limits;
 import core.stdc.stdio;
 import core.stdc.stdlib;
 import core.stdc.string;
+import core.stdc.time;
 
 import dmd.arraytypes;
 import dmd.astcodegen;
@@ -60,6 +61,53 @@ import dmd.semantic2;
 import dmd.semantic3;
 import dmd.target;
 import dmd.utils;
+
+enum Times : int {
+    all,
+    getopt,
+    mods,
+    parser,
+    init,
+    sem1,
+    sem2,
+    sem3,
+    inline,
+    defSem1,
+    defSem2,
+    defSem3,
+    sem3OnDeps,
+    importAll,
+    genCode,
+    last
+}
+
+clock_t[Times.last] times;
+uint[Times.last] rslt;
+
+void startTimer(Times t) {
+    const idx = cast(int)t;
+    times[idx] = clock();
+}
+
+void stopTimer(Times t) {
+    const idx = cast(int)t;
+    rslt[idx] += clock() - times[idx];
+}
+
+void continueTimer(Times t) {
+    const idx = cast(int)t;
+    times[idx] = clock();
+}
+
+void printTimes() {
+    const cps = cast(double)CLOCKS_PER_SEC;
+    auto a = [__traits(allMembers, Times)];
+    static foreach(Times t; Times.all .. Times.last) {{
+        string n = a[t];
+        double p = (rslt[t] / cast(double)rslt[Times.all]) * 100.0;
+        printf("%10s: %3.7f s %6.2f%%\n", n.ptr, rslt[t] / cps, p);
+    }}
+}
 
 /**
  * Print DMD's logo on stdout
@@ -134,6 +182,11 @@ Where:
  */
 private int tryMain(size_t argc, const(char)** argv, ref Param params)
 {
+    startTimer(Times.all);
+    scope(exit) {
+        stopTimer(Times.all);
+        printTimes();
+    }
     Strings files;
     Strings libmodules;
     global._init();
@@ -144,6 +197,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         error(Loc.initial, "missing or null command line arguments");
         fatal();
     }
+    startTimer(Times.getopt);
     // Convert argc/argv into arguments[] for easier handling
     Strings arguments = Strings(argc);
     for (size_t i = 0; i < argc; i++)
@@ -235,18 +289,21 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         Loc loc;
         errorSupplemental(loc, "run `dmd` to print the compiler manual");
         errorSupplemental(loc, "run `dmd -man` to open browser on manual");
+        stopTimer(Times.getopt);
         return EXIT_FAILURE;
     }
 
     if (params.usage)
     {
         usage();
+        stopTimer(Times.getopt);
         return EXIT_SUCCESS;
     }
 
     if (params.logo)
     {
         logo();
+        stopTimer(Times.getopt);
         return EXIT_SUCCESS;
     }
 
@@ -341,9 +398,11 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         if (params.jsonFieldFlags)
         {
             generateJson(null);
+            stopTimer(Times.getopt);
             return EXIT_SUCCESS;
         }
         usage();
+        stopTimer(Times.getopt);
         return EXIT_FAILURE;
     }
 
@@ -358,7 +417,9 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
             DebugCondition.addGlobalIdent(charz[0 .. strlen(charz)]);
 
     setTarget(params);
+    stopTimer(Times.getopt);
 
+    startTimer(Times.init);
     // Predefined version identifiers
     addDefaultVersionIdentifiers(params);
 
@@ -388,6 +449,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         stdout.printPredefinedVersions();
         stdout.printGlobalConfigs();
     }
+    stopTimer(Times.init);
     //printf("%d source files\n",files.dim);
 
     // Build import search path
@@ -423,6 +485,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
     if (params.addMain)
         files.push("__main.d");
     // Create Modules
+    startTimer(Times.mods);
     Modules modules = createModules(files, libmodules);
     // Read files
     // Start by "reading" the special files (__main.d, __stdin.d)
@@ -459,7 +522,9 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         if (!params.oneobj || modi == 0 || m.isDocFile)
             m.deleteObjFile();
 
+        continueTimer(Times.parser);
         m.parse();
+        stopTimer(Times.parser);
         if (m.isHdrFile)
         {
             // Remove m's object file from list of object files
@@ -494,6 +559,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
                 params.link = false;
         }
     }
+    stopTimer(Times.mods);
 
     if (anydocfiles && modules.dim && (params.oneobj || params.objname))
     {
@@ -523,28 +589,34 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
         fatal();
 
     // load all unconditional imports for better symbol resolving
+    startTimer(Times.importAll);
     foreach (m; modules)
     {
         if (params.verbose)
             message("importall %s", m.toChars());
         m.importAll(null);
     }
+    stopTimer(Times.importAll);
     if (global.errors)
         fatal();
 
     backend_init();
 
     // Do semantic analysis
+    startTimer(Times.sem1);
     foreach (m; modules)
     {
         if (params.verbose)
             message("semantic  %s", m.toChars());
         m.dsymbolSemantic(null);
     }
+    stopTimer(Times.sem1);
     //if (global.errors)
     //    fatal();
     Module.dprogress = 1;
+    startTimer(Times.defSem1);
     Module.runDeferredSemantic();
+    stopTimer(Times.defSem1);
     if (Module.deferred.dim)
     {
         for (size_t i = 0; i < Module.deferred.dim; i++)
@@ -556,23 +628,29 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
     }
 
     // Do pass 2 semantic analysis
+    startTimer(Times.sem2);
     foreach (m; modules)
     {
         if (params.verbose)
             message("semantic2 %s", m.toChars());
         m.semantic2(null);
     }
+    stopTimer(Times.sem2);
+    startTimer(Times.defSem2);
     Module.runDeferredSemantic2();
+    stopTimer(Times.defSem2);
     if (global.errors)
         fatal();
 
     // Do pass 3 semantic analysis
+    startTimer(Times.sem3);
     foreach (m; modules)
     {
         if (params.verbose)
             message("semantic3 %s", m.toChars());
         m.semantic3(null);
     }
+    stopTimer(Times.sem3);
     if (includeImports)
     {
         // Note: DO NOT USE foreach here because Module.amodules.dim can
@@ -587,19 +665,23 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
             modules.push(m);
         }
     }
+    startTimer(Times.defSem3);
     Module.runDeferredSemantic3();
+    stopTimer(Times.defSem3);
     if (global.errors)
         fatal();
 
     // Scan for functions to inline
     if (params.useInline)
     {
+        startTimer(Times.inline);
         foreach (m; modules)
         {
             if (params.verbose)
                 message("inline scan %s", m.toChars());
             inlineScanModule(m);
         }
+        stopTimer(Times.inline);
     }
     // Do not attempt to generate output files if errors or warnings occurred
     if (global.errors || global.warnings)
@@ -609,6 +691,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
     // So deps file generation should be moved after the inlining stage.
     if (OutBuffer* ob = params.moduleDeps)
     {
+        startTimer(Times.sem3OnDeps);
         foreach (i; 1 .. modules[0].aimports.dim)
             semantic3OnDependencies(modules[0].aimports[i]);
 
@@ -617,6 +700,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
             writeFile(Loc.initial, params.moduleDepsFile, data);
         else
             printf("%.*s", cast(int)data.length, data.ptr);
+        stopTimer(Times.sem3OnDeps);
     }
 
     printCtfePerformanceStats();
@@ -661,6 +745,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
             File.write(cgFilename.ptr, buf[]);
         }
     }
+    startTimer(Times.genCode);
     if (!params.obj)
     {
     }
@@ -701,6 +786,7 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
                 m.deleteObjFile();
         }
     }
+    stopTimer(Times.genCode);
     if (params.lib && !global.errors)
         library.write();
     backend_term();
