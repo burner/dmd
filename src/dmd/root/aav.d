@@ -14,6 +14,13 @@ module dmd.root.aav;
 import core.stdc.string;
 import dmd.root.rmem;
 
+enum initLength = 4;
+
+size_t aaConflicts;
+size_t aaInserts;
+size_t aaRehash;
+size_t aaNewAlloc;
+
 private size_t hash(size_t a) pure nothrow @nogc @safe
 {
     a ^= (a >> 20) ^ (a >> 12);
@@ -38,12 +45,38 @@ struct aaA
     alias keyValue this;
 }
 
+private struct aaAAlloc {
+    aaA* memPtr;
+    long avail;
+
+    aaA* getNew() nothrow {
+        import core.stdc.stdio;
+        if(this.avail <= 0) {
+            //printf("%d %d\n", this.memPtr is null, this.avail <= 0);
+            //enum bytesToAlloc = 1 * 2^^10;
+            enum bytesToAlloc = aaA.sizeof * 32;
+            this.memPtr = cast(aaA*)mem.xmalloc(bytesToAlloc);
+            this.avail = bytesToAlloc / aaA.sizeof;
+            //printf("%ld %ld %p\n", bytesToAlloc, this.avail, this.memPtr);
+            ++aaNewAlloc;
+        }
+        //printf("%d %d %d\n", this.memPtr is null, this.avail <= 0,
+        //        this.avail);
+        aaA* ret = this.memPtr;
+        //printf("%lu\n", this.memPtr);
+        this.memPtr++;
+        //printf("%lu %lu\n", this.memPtr, aaA.sizeof);
+        --this.avail;
+        return ret;
+    }
+}
+
 struct AA
 {
     aaA** b;
     size_t b_length;
     size_t nodes; // total number of aaA nodes
-    aaA*[4] binit; // initial value of b[]
+    aaA*[initLength] binit; // initial value of b[]
     aaA aafirst; // a lot of these AA's have only one entry
 }
 
@@ -60,21 +93,21 @@ private size_t dmd_aaLen(const AA* aa) pure nothrow @nogc @safe
  * Add entry for key if it is not already there, returning a pointer to a null Value.
  * Create the associative array if it does not already exist.
  */
-private Value* dmd_aaGet(AA** paa, Key key) pure nothrow
+private Value* dmd_aaGet(AA** paa, aaAAlloc* alloc, Key key) /*pure*/ nothrow
 {
     //printf("paa = %p\n", paa);
     if (!*paa)
     {
         AA* a = cast(AA*)mem.xmalloc(AA.sizeof);
         a.b = cast(aaA**)a.binit;
-        a.b_length = 4;
+        a.b_length = initLength;
         a.nodes = 0;
-        a.binit[0] = null;
-        a.binit[1] = null;
-        a.binit[2] = null;
-        a.binit[3] = null;
+        foreach (idx; 0 .. a.b_length)
+        {
+            a.binit[idx] = null;
+        }
         *paa = a;
-        assert((*paa).b_length == 4);
+        assert((*paa).b_length == initLength);
     }
     //printf("paa = %p, *paa = %p\n", paa, *paa);
     assert((*paa).b_length);
@@ -85,12 +118,15 @@ private Value* dmd_aaGet(AA** paa, Key key) pure nothrow
     {
         if (key == e.key)
             return &e.value;
+        ++aaConflicts;
         pe = &e.next;
     }
     // Not found, create new elem
     //printf("create new one\n");
+    ++aaInserts;
     size_t nodes = ++(*paa).nodes;
-    e = (nodes != 1) ? cast(aaA*)mem.xmalloc(aaA.sizeof) : &(*paa).aafirst;
+    //e = (nodes != 1) ? cast(aaA*)mem.xmalloc(aaA.sizeof) : &(*paa).aafirst;
+    e = (nodes != 1) ? alloc.getNew() : &(*paa).aafirst;
     //e = new aaA();
     e.next = null;
     e.key = key;
@@ -99,6 +135,7 @@ private Value* dmd_aaGet(AA** paa, Key key) pure nothrow
     //printf("length = %d, nodes = %d\n", (*paa)->b_length, nodes);
     if (nodes > (*paa).b_length * 2)
     {
+        ++aaRehash;
         //printf("rehash\n");
         dmd_aaRehash(paa);
     }
@@ -230,7 +267,7 @@ private void dmd_aaRehash(AA** paa) pure nothrow
         if (aa)
         {
             size_t len = aa.b_length;
-            if (len == 4)
+            if (len == initLength)
                 len = 32;
             else
                 len *= 4;
@@ -271,6 +308,7 @@ unittest
 struct AssocArray(K,V)
 {
     private AA* aa;
+    private aaAAlloc alloc;
 
     /**
     Returns: The number of key/value pairs.
@@ -290,9 +328,9 @@ struct AssocArray(K,V)
     Returns: the address to the value associated with `key`. If `key` does not exist, it
              is added and the address to the new value is returned.
     */
-    V* getLvalue(const(K) key) pure nothrow
+    V* getLvalue(const(K) key) /*pure*/ nothrow
     {
-        return cast(V*)dmd_aaGet(&aa, cast(void*)key);
+        return cast(V*)dmd_aaGet(&aa, &alloc, cast(void*)key);
     }
 
     /**

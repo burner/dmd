@@ -766,6 +766,13 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
     if (global.errors || global.warnings)
         removeHdrFilesAndFail(params, modules);
 
+    static import dmd.root.aav;
+    printf("inserts %lu, conflicts %lu, rehash %lu, newAlloc %lu\n",
+        dmd.root.aav.aaInserts,
+        dmd.root.aav.aaConflicts,
+        dmd.root.aav.aaRehash,
+        dmd.root.aav.aaNewAlloc
+        );
     return status;
 }
 
