@@ -82,6 +82,7 @@ public:
     }
 
 nothrow:
+
     override const(char)* toChars() const pure
     {
         return name.ptr;
